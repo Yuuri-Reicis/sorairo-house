@@ -514,6 +514,82 @@
             transform: scale(1.1);
         }
 
+        /* フッターコントロール */
+        .footer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+        }
+
+        .api-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .api-key-input-small {
+            width: 160px;
+            padding: 6px 10px;
+            border: 1px solid #e0d4f0;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            background: #faf8ff;
+        }
+
+        .api-key-input-small:focus {
+            outline: none;
+            border-color: #c9b8e8;
+        }
+
+        .model-select-small {
+            padding: 6px 10px;
+            border: 1px solid #e0d4f0;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            background: #faf8ff;
+            color: #7c6a9a;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            background: linear-gradient(135deg, #c9b8e8 0%, #e8a0b5 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-small:hover {
+            transform: translateY(-1px);
+        }
+
+        .api-status-small {
+            font-size: 0.75rem;
+            color: #6ab29b;
+        }
+
+        .token-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: #9a8ab0;
+        }
+
+        .token-date {
+            font-size: 0.75rem;
+            color: #b0a0c0;
+        }
+
         /* 空状態 */
         .empty-state {
             display: flex;
@@ -831,17 +907,6 @@
             <div class="header">
                 <h1>SORAIRO House</h1>
                 <div class="header-controls">
-                    <input type="password" id="apiKeyInput" class="api-key-input"
-                        placeholder="OpenAI APIキーを入力 (sk-...)">
-                    <button class="btn btn-primary" onclick="saveApiKey()">保存</button>
-                    <select id="modelSelect" class="model-select" onchange="saveModelSelection()">
-                        <option value="gpt-4o-mini">GPT-4o-mini (安い)</option>
-                        <option value="gpt-4o">GPT-4o (高性能)</option>
-                        <option value="gpt-5-mini">GPT-5-mini</option>
-                        <option value="gpt-5.1-chat-latest">GPT-5.1</option>
-                        <option value="gpt-4-turbo">GPT-4-turbo</option>
-                        <option value="gpt-4">GPT-4</option>
-                    </select>
                     <button class="settings-btn" onclick="openSettings()" title="設定">⚙️</button>
 
                     <!-- ログインエリア -->
@@ -851,7 +916,6 @@
                         </button>
                     </div>
                 </div>
-                <div id="apiStatus" class="api-status"></div>
             </div>
 
             <!-- チャットエリア -->
@@ -879,12 +943,27 @@
                 <button id="sendBtn" class="btn btn-primary send-btn" onclick="sendMessage()">➤</button>
             </div>
 
-            <!-- トークン表示 -->
-            <div class="token-display-area">
-                <div id="tokenDisplay" class="token-display">📊 トークン: --</div>
-                <div id="tokenStats" class="token-stats">
-                    <span id="tokenStartDate">集計開始: --</span>
-                    <button class="btn token-reset-btn" onclick="resetTokenStats()" title="累計をリセット">🔄</button>
+            <!-- 下部コントロールエリア -->
+            <div class="footer-controls">
+                <!-- APIキー・モデル選択 -->
+                <div class="api-controls">
+                    <input type="password" id="apiKeyInput" class="api-key-input-small" placeholder="APIキー (sk-...)">
+                    <button class="btn-small" onclick="saveApiKey()">保存</button>
+                    <select id="modelSelect" class="model-select-small" onchange="saveModelSelection()">
+                        <option value="gpt-4o-mini">GPT-4o-mini</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-5-mini">GPT-5-mini</option>
+                        <option value="gpt-5.1-chat-latest">GPT-5.1</option>
+                        <option value="gpt-4-turbo">GPT-4-turbo</option>
+                        <option value="gpt-4">GPT-4</option>
+                    </select>
+                    <span id="apiStatus" class="api-status-small"></span>
+                </div>
+                <!-- トークン表示 -->
+                <div class="token-info">
+                    <span id="tokenDisplay" class="token-display">📊 トークン: --</span>
+                    <span id="tokenStartDate" class="token-date">集計開始: --</span>
+                    <button class="btn-small token-reset-btn" onclick="resetTokenStats()" title="累計をリセット">🔄</button>
                 </div>
             </div>
         </main>
