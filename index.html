@@ -590,6 +590,12 @@
             color: #b0a0c0;
         }
 
+        .footer-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         /* 空状態 */
         .empty-state {
             display: flex;
@@ -901,22 +907,9 @@
             </div>
         </aside>
 
+
         <!-- メインエリア -->
         <main class="main-area">
-            <!-- ヘッダー -->
-            <div class="header">
-                <h1>SORAIRO House</h1>
-                <div class="header-controls">
-                    <button class="settings-btn" onclick="openSettings()" title="設定">⚙️</button>
-
-                    <!-- ログインエリア -->
-                    <div id="authArea" class="auth-area">
-                        <button id="loginBtn" class="login-btn" onclick="loginWithGoogle()">
-                            🔐 ログイン
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- チャットエリア -->
             <div id="chatArea" class="chat-area">
@@ -964,6 +957,15 @@
                     <span id="tokenDisplay" class="token-display">📊 トークン: --</span>
                     <span id="tokenStartDate" class="token-date">集計開始: --</span>
                     <button class="btn-small token-reset-btn" onclick="resetTokenStats()" title="累計をリセット">🔄</button>
+                </div>
+                <!-- 設定・ログイン -->
+                <div class="footer-actions">
+                    <button class="settings-btn" onclick="openSettings()" title="設定">⚙️</button>
+                    <div id="authArea" class="auth-area">
+                        <button id="loginBtn" class="login-btn" onclick="loginWithGoogle()">
+                            🔐 ログイン
+                        </button>
+                    </div>
                 </div>
             </div>
         </main>
