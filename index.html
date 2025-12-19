@@ -2242,7 +2242,8 @@ AI: ${assistantMessage}
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
-            return div.innerHTML;
+            // 改行を<br>に変換
+            return div.innerHTML.replace(/\n/g, '<br>');
         }
 
         function handleKeyDown(event) {
