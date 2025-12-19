@@ -2165,10 +2165,8 @@ AI: ${assistantMessage}
         }
 
         function handleKeyDown(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
+            // Enterキーでは送信しない（送信ボタンのみで送信）
+            // Shift+Enterで改行は可能
         }
 
         function autoResizeTextarea() {
