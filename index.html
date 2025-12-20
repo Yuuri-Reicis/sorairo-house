@@ -946,7 +946,7 @@
                         <option value="gpt-4o-mini">GPT-4o-mini</option>
                         <option value="gpt-4o">GPT-4o</option>
                         <option value="gpt-5-mini">GPT-5-mini</option>
-                        <option value="gpt-5.1-chat-latest">GPT-5.1</option>
+                        <option value="gpt-5.1-chat-latest">GPT-5.1-chat</option>
                         <option value="gpt-4-turbo">GPT-4-turbo</option>
                         <option value="gpt-4">GPT-4</option>
                     </select>
@@ -1449,10 +1449,12 @@
             const display = document.getElementById('tokenDisplay');
             const current = currentPrompt + currentCompletion;
 
-            // コスト計算（GPT-4o-mini: $0.15入力 / $0.60出力 per 1Mトークン）
-            const totalCost = (totalTokensUsed / 1000000) * 0.3 * 150;  // 概算
+            // コスト計算（GPT-5.1-chat: $1.25入力 / $10.00出力 per 1Mトークン）
+            // 簡易計算: 入力:出力 = 3:1と仮定
+            const avgCostPerToken = (1.25 * 0.75 + 10.00 * 0.25) / 1000000;  // 約$3.44/1M
+            const totalCost = totalTokensUsed * avgCostPerToken * 150;  // 円換算
 
-            display.innerHTML = `📊 今回: ${current} | 累計: ${totalTokensUsed.toLocaleString()} (約¥${totalCost.toFixed(1)})`;
+            display.innerHTML = `📊 今回: ${current} | 累計: ${totalTokensUsed.toLocaleString()} (約¥${totalCost.toFixed(0)})`;
         }
 
         // ========================================
