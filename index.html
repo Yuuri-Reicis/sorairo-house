@@ -107,6 +107,85 @@
             padding: 8px;
         }
 
+        /* サイドバー上部コントロール（設定・ログイン） */
+        .sidebar-top-controls {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0d4f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* サイドバー下部コントロール（APIキー・モデル） */
+        .sidebar-bottom-controls {
+            padding: 12px 16px;
+            border-top: 1px solid #e0d4f0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-api-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .api-key-input-sidebar {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid #e0d4f0;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            background: #faf8ff;
+        }
+
+        .api-key-input-sidebar:focus {
+            outline: none;
+            border-color: #c9b8e8;
+        }
+
+        .model-select-sidebar {
+            flex: 1;
+            padding: 6px 8px;
+            border: 2px solid #e0d4f0;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            background: #faf8ff;
+            color: #7c6a9a;
+        }
+
+        /* 左サイドバー開閉ボタン（スマホ用） */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            left: 16px;
+            bottom: 100px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #c9b8e8 0%, #e8a0b5 100%);
+            color: white;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(201, 184, 232, 0.4);
+            z-index: 999;
+            transition: transform 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .sidebar-close {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #9a8ab0;
+        }
+
         .session-item {
             padding: 12px;
             margin-bottom: 4px;
@@ -335,6 +414,8 @@
             background: linear-gradient(135deg, #ffe4ec 0%, #ffd6e7 100%);
             color: #8a6070;
             border-bottom-right-radius: 6px;
+            width: fit-content;
+            margin-left: auto;
         }
 
         .message.assistant .message-bubble {
@@ -973,8 +1054,50 @@
             font-size: 0.9rem;
         }
 
+        .history-panel-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #e0d4f0;
+            font-size: 0.8rem;
+            color: #9a8ab0;
+        }
+
+        .history-panel-footer .token-display {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .token-footer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         /* スマホ対応 */
         @media (max-width: 1024px) {
+
+            /* 左サイドバー */
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                height: 100vh;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar-toggle {
+                display: block;
+            }
+
+            .sidebar-close {
+                display: block;
+            }
+
+            /* 右サイドバー */
             .history-panel {
                 position: fixed;
                 right: -280px;
@@ -1002,6 +1125,16 @@
     <div class="app-container">
         <!-- サイドバー -->
         <aside class="sidebar">
+            <!-- 上部: 設定・ログイン -->
+            <div class="sidebar-top-controls">
+                <button class="sidebar-close" onclick="toggleSidebar()">×</button>
+                <button class="settings-btn" onclick="openSettings()" title="設定">⚙️</button>
+                <div id="authArea" class="auth-area">
+                    <button id="loginBtn" class="login-btn" onclick="loginWithGoogle()">
+                        🔐 ログイン
+                    </button>
+                </div>
+            </div>
             <div class="sidebar-header">
                 <h2>🌸 セッション</h2>
                 <button class="new-session-btn" onclick="createNewSession()">
@@ -1015,7 +1148,26 @@
             <div id="sessionList" class="session-list">
                 <!-- セッション一覧がここに入る -->
             </div>
+            <!-- 下部: APIキー・モデル選択 -->
+            <div class="sidebar-bottom-controls">
+                <input type="password" id="apiKeyInput" class="api-key-input-sidebar" placeholder="APIキー (sk-...)">
+                <div class="sidebar-api-row">
+                    <button class="btn-small" onclick="saveApiKey()">保存</button>
+                    <select id="modelSelect" class="model-select-sidebar" onchange="saveModelSelection()">
+                        <option value="gpt-4o-mini">GPT-4o-mini</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-5-mini">GPT-5-mini</option>
+                        <option value="gpt-5.1-chat-latest">GPT-5.1-chat</option>
+                        <option value="gpt-4-turbo">GPT-4-turbo</option>
+                        <option value="gpt-4">GPT-4</option>
+                    </select>
+                </div>
+                <span id="apiStatus" class="api-status-small"></span>
+            </div>
         </aside>
+
+        <!-- 左サイドバー開閉ボタン（スマホ用） -->
+        <button id="sidebarToggle" class="sidebar-toggle" onclick="toggleSidebar()">🌸</button>
 
 
         <!-- メインエリア -->
@@ -1045,39 +1197,6 @@
                     onkeydown="handleKeyDown(event)"></textarea>
                 <button id="sendBtn" class="btn btn-primary send-btn" onclick="sendMessage()">➤</button>
             </div>
-
-            <!-- 下部コントロールエリア -->
-            <div class="footer-controls">
-                <!-- APIキー・モデル選択 -->
-                <div class="api-controls">
-                    <input type="password" id="apiKeyInput" class="api-key-input-small" placeholder="APIキー (sk-...)">
-                    <button class="btn-small" onclick="saveApiKey()">保存</button>
-                    <select id="modelSelect" class="model-select-small" onchange="saveModelSelection()">
-                        <option value="gpt-4o-mini">GPT-4o-mini</option>
-                        <option value="gpt-4o">GPT-4o</option>
-                        <option value="gpt-5-mini">GPT-5-mini</option>
-                        <option value="gpt-5.1-chat-latest">GPT-5.1-chat</option>
-                        <option value="gpt-4-turbo">GPT-4-turbo</option>
-                        <option value="gpt-4">GPT-4</option>
-                    </select>
-                    <span id="apiStatus" class="api-status-small"></span>
-                </div>
-                <!-- トークン表示 -->
-                <div class="token-info">
-                    <span id="tokenDisplay" class="token-display">📊 トークン: --</span>
-                    <span id="tokenStartDate" class="token-date">集計開始: --</span>
-                    <button class="btn-small token-reset-btn" onclick="resetTokenStats()" title="累計をリセット">🔄</button>
-                </div>
-                <!-- 設定・ログイン -->
-                <div class="footer-actions">
-                    <button class="settings-btn" onclick="openSettings()" title="設定">⚙️</button>
-                    <div id="authArea" class="auth-area">
-                        <button id="loginBtn" class="login-btn" onclick="loginWithGoogle()">
-                            🔐 ログイン
-                        </button>
-                    </div>
-                </div>
-            </div>
         </main>
 
         <!-- 圧縮履歴パネル -->
@@ -1088,6 +1207,14 @@
             </div>
             <div id="historyList" class="history-list">
                 <div class="history-empty">まだ圧縮された履歴がありません</div>
+            </div>
+            <!-- トークン表示 -->
+            <div class="history-panel-footer">
+                <span id="tokenDisplay" class="token-display">📊 トークン: --</span>
+                <div class="token-footer-row">
+                    <span id="tokenStartDate" class="token-date">集計開始: --</span>
+                    <button class="btn-small token-reset-btn" onclick="resetTokenStats()" title="累計をリセット">🔄</button>
+                </div>
             </div>
         </aside>
 
@@ -2175,6 +2302,12 @@
         function toggleHistoryPanel() {
             const panel = document.getElementById('historyPanel');
             panel.classList.toggle('open');
+        }
+
+        // 左サイドバーの開閉
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('open');
         }
 
         // メッセージを編集（該当位置以降を削除して入力欄にセット）
