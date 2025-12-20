@@ -1576,7 +1576,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey} `
+                        'Authorization': `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
                         model: 'gpt-4o-mini',  // 圧縮には安いモデルを使う
@@ -1749,14 +1749,14 @@
 
             if (type === 'image') {
                 content.innerHTML = `
-                            < img src = "${data}" class="file-preview-image" alt = "${name}" >
-                                <span class="file-preview-text">📷 ${name}</span>
-                        `;
+                    <img src="${data}" class="file-preview-image" alt="${name}">
+                    <span class="file-preview-text">📷 ${name}</span>
+                `;
             } else {
                 const truncated = data.length > 100 ? data.slice(0, 100) + '...' : data;
                 content.innerHTML = `
-                            < span class="file-preview-text" >📄 ${name} (${data.length}文字)</span >
-                                `;
+                    <span class="file-preview-text">📄 ${name} (${data.length}文字)</span>
+                `;
             }
 
             preview.style.display = 'flex';
@@ -1956,7 +1956,7 @@
                 const preview = lastMessage ? lastMessage.content.slice(0, 30) + '...' : 'メッセージなし';
 
                 return `
-                            < div class="session-item ${isActive ? 'active' : ''}" onclick = "switchSession('${session.id}')" >
+                    <div class="session-item ${isActive ? 'active' : ''}" onclick="switchSession('${session.id}')">
                         <div class="session-info">
                             <div class="session-name">${escapeHtml(session.name)}</div>
                             <div class="session-preview">${escapeHtml(preview)}</div>
@@ -1965,8 +1965,8 @@
                             <button class="session-action-btn" onclick="exportSession('${session.id}', event)" title="エクスポート">💾</button>
                             <button class="session-action-btn" onclick="deleteSession('${session.id}', event)" title="削除">🗑️</button>
                         </div>
-                    </div >
-                            `;
+                    </div>
+                `;
             }).join('');
         }
 
@@ -1987,11 +1987,11 @@
 
             if (!session || session.messages.length === 0) {
                 chatArea.innerHTML = `
-                            < div class="empty-state" >
+                    <div class="empty-state">
                         <div class="empty-state-icon">🌸</div>
                         <div class="empty-state-text">メッセージを送信してチャットを始めよう！</div>
-                    </div >
-                            `;
+                    </div>
+                `;
                 return;
             }
 
@@ -2003,24 +2003,24 @@
                 // アクションボタン
                 let actions = '';
                 if (isUser) {
-                    actions = `< div class="message-actions" >
-                            <button class="message-action-btn" onclick="editMessage(${index})">✏️ 編集</button>
-                    </div > `;
+                    actions = `<div class="message-actions">
+                        <button class="message-action-btn" onclick="editMessage(${index})">✏️ 編集</button>
+                    </div>`;
                 } else if (isLastAssistant) {
-                    actions = `< div class="message-actions" >
-                            <button class="message-action-btn" onclick="regenerateResponse()">🔄 再生成</button>
-                    </div > `;
+                    actions = `<div class="message-actions">
+                        <button class="message-action-btn" onclick="regenerateResponse()">🔄 再生成</button>
+                    </div>`;
                 }
 
                 return `
-                            < div class="message ${msg.role}" >
-                                <div>
-                                    <div class="message-label">${label}</div>
-                                    <div class="message-bubble">${escapeHtml(msg.content)}</div>
-                                    ${actions}
-                                </div>
-                    </div >
-                            `;
+                    <div class="message ${msg.role}">
+                        <div>
+                            <div class="message-label">${label}</div>
+                            <div class="message-bubble">${escapeHtml(msg.content)}</div>
+                            ${actions}
+                        </div>
+                    </div>
+                `;
             }).join('');
 
             chatArea.scrollTop = chatArea.scrollHeight;
@@ -2304,14 +2304,14 @@
             loadingDiv.className = 'message assistant';
             loadingDiv.id = 'loadingIndicator';
             loadingDiv.innerHTML = `
-                            < div >
+                <div>
                     <div class="message-label">レイシス</div>
                     <div class="loading">
                         <div class="loading-dot"></div>
                         <div class="loading-dot"></div>
                         <div class="loading-dot"></div>
                     </div>
-                </div >
+                </div>
             `;
             chatArea.appendChild(loadingDiv);
             chatArea.scrollTop = chatArea.scrollHeight;
