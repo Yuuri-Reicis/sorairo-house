@@ -1047,6 +1047,28 @@
             margin-bottom: 4px;
         }
 
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .history-delete-btn {
+            background: none;
+            border: none;
+            color: #c0b0d0;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .history-delete-btn:hover {
+            color: #e07080;
+        }
+
         .history-empty {
             text-align: center;
             color: #b0a0c0;
@@ -2303,12 +2325,27 @@
                 return;
             }
 
-            historyList.innerHTML = session.compressedHistory.map(item => `
+            historyList.innerHTML = session.compressedHistory.map((item, index) => `
                 <div class="history-item">
-                    <div class="history-item-turn">ターン ${item.turn}</div>
+                    <div class="history-item-header">
+                        <span class="history-item-turn">ターン ${item.turn}</span>
+                        <button class="history-delete-btn" onclick="deleteCompressedHistoryItem(${index})" title="削除">×</button>
+                    </div>
                     ${escapeHtml(item.summary)}
                 </div>
             `).join('');
+        }
+
+        // 圧縮履歴を個別に削除
+        function deleteCompressedHistoryItem(index) {
+            const session = getCurrentSession();
+            if (!session || !session.compressedHistory) return;
+
+            if (confirm('この記憶を削除しますか？')) {
+                session.compressedHistory.splice(index, 1);
+                saveSessions();
+                renderCompressedHistory();
+            }
         }
 
         // 圧縮履歴パネルの開閉
