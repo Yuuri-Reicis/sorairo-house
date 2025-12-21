@@ -1385,10 +1385,7 @@
 
             if (currentUser) {
                 authArea.innerHTML = `
-                    <div class="user-info">
-                        <img src="${currentUser.photoURL || ''}" class="user-avatar" alt="">
-                        <span>${currentUser.displayName || 'ユーザー'}</span>
-                    </div>
+                    <img src="${currentUser.photoURL || ''}" class="user-avatar" alt="">
                     <span id="syncStatus" class="sync-status">✓ 同期済み</span>
                     <button class="logout-btn" onclick="logout()">ログアウト</button>
                 `;
