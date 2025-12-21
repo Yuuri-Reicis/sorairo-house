@@ -2592,6 +2592,11 @@
                 let textQueue = '';
                 let isTyping = false;
 
+                // 最下部にいるかチェック（50px以内なら最下部とみなす）
+                function isNearBottom() {
+                    return chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 50;
+                }
+
                 // 1文字ずつ表示する関数
                 function typeNextChar() {
                     if (textQueue.length > 0) {
@@ -2599,8 +2604,11 @@
                         displayedText += textQueue[0];
                         textQueue = textQueue.slice(1);
                         streamingBubble.innerHTML = escapeHtml(displayedText);
-                        chatArea.scrollTop = chatArea.scrollHeight;
-                        setTimeout(typeNextChar, 30); // 30ms間隔で1文字ずつ
+                        // 最下部にいる時だけ自動スクロール
+                        if (isNearBottom()) {
+                            chatArea.scrollTop = chatArea.scrollHeight;
+                        }
+                        setTimeout(typeNextChar, 30);
                     } else {
                         isTyping = false;
                     }
