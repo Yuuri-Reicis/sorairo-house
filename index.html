@@ -2587,6 +2587,25 @@
                 chatArea.appendChild(messageDiv);
                 const streamingBubble = document.getElementById('streamingBubble');
 
+                // タイピングエフェクト用のキュー
+                let displayedText = '';
+                let textQueue = '';
+                let isTyping = false;
+
+                // 1文字ずつ表示する関数
+                function typeNextChar() {
+                    if (textQueue.length > 0) {
+                        isTyping = true;
+                        displayedText += textQueue[0];
+                        textQueue = textQueue.slice(1);
+                        streamingBubble.innerHTML = escapeHtml(displayedText);
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                        setTimeout(typeNextChar, 30); // 30ms間隔で1文字ずつ
+                    } else {
+                        isTyping = false;
+                    }
+                }
+
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
@@ -2604,8 +2623,10 @@
                                 const delta = parsed.choices[0]?.delta?.content;
                                 if (delta) {
                                     assistantMessage += delta;
-                                    streamingBubble.innerHTML = escapeHtml(assistantMessage);
-                                    chatArea.scrollTop = chatArea.scrollHeight;
+                                    textQueue += delta;
+                                    if (!isTyping) {
+                                        typeNextChar();
+                                    }
                                 }
                                 // 使用量情報を取得（最後のチャンクに含まれることがある）
                                 if (parsed.usage) {
@@ -2617,6 +2638,11 @@
                             }
                         }
                     }
+                }
+
+                // 残りのテキストを表示し終わるまで待機
+                while (textQueue.length > 0 || isTyping) {
+                    await new Promise(resolve => setTimeout(resolve, 50));
                 }
 
                 // streamingBubbleのIDを削除
