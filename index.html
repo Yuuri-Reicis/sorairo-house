@@ -22,9 +22,10 @@
 
         body {
             font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
-            background: linear-gradient(135deg, #f5f0ff 0%, #fce4ec 100%);
+            background: linear-gradient(135deg, var(--bg-start, #f5f0ff) 0%, var(--bg-end, #fce4ec) 100%);
             min-height: 100vh;
             display: flex;
+            transition: background 1.5s ease;
         }
 
         /* ========================================
@@ -2712,6 +2713,9 @@
                 saveSessions();
                 renderSessionList();
 
+                // 感情に応じた背景色変更
+                updateEmotionBackground(assistantMessage);
+
                 // 必要に応じて履歴を圧縮（非同期で実行）
                 compressHistoryIfNeeded(session, apiKey);
 
@@ -2781,6 +2785,44 @@
             // 改行 → <br>
             html = html.replace(/\n/g, '<br>');
             return html;
+        }
+
+        // 感情に応じた背景色変更
+        function updateEmotionBackground(text) {
+            // 絵文字と対応する背景グラデーション
+            const emotionThemes = {
+                '🌸': { start: '#fff0f5', end: '#ffe4ec' },   // 幸福・穏やか（ピンク）
+                '💕': { start: '#fff0f5', end: '#ffe4ec' },   // 愛情（ピンク）
+                '😊': { start: '#fff8e7', end: '#ffe4d4' },   // 笑顔（暖かい黄色）
+                '💓': { start: '#ffe4e8', end: '#ffd0d8' },   // 情熱（ローズ）
+                '🔥': { start: '#ffe4e8', end: '#ffd0d8' },   // 情熱（ローズ）
+                '🌙': { start: '#f0f0ff', end: '#e8e0f8' },   // 夜・落ち着き（紫）
+                '💤': { start: '#f0f0ff', end: '#e8e0f8' },   // 眠い（紫）
+                '😢': { start: '#e8f4ff', end: '#d8e8f8' },   // 寂しい（淡い青）
+                '🥺': { start: '#e8f4ff', end: '#d8e8f8' },   // 切ない（淡い青）
+                '✨': { start: '#fffde8', end: '#fff0d0' },   // ワクワク（黄色）
+                '🎉': { start: '#fffde8', end: '#fff0d0' },   // 楽しい（黄色）
+                '😤': { start: '#ffe8e0', end: '#ffd0c0' },   // 怒り・苛立ち（オレンジ）
+                '💢': { start: '#ffe8e0', end: '#ffd0c0' },   // 怒り（オレンジ）
+            };
+
+            // テキストから絵文字を検出（最後の方を優先）
+            let detectedEmotion = null;
+            for (const emoji in emotionThemes) {
+                if (text.includes(emoji)) {
+                    detectedEmotion = emotionThemes[emoji];
+                }
+            }
+
+            // 感情が検出されたら背景を変更
+            if (detectedEmotion) {
+                document.body.style.setProperty('--bg-start', detectedEmotion.start);
+                document.body.style.setProperty('--bg-end', detectedEmotion.end);
+            } else {
+                // デフォルトに戻す
+                document.body.style.setProperty('--bg-start', '#f5f0ff');
+                document.body.style.setProperty('--bg-end', '#fce4ec');
+            }
         }
 
         function handleKeyDown(event) {
