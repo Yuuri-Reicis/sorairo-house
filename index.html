@@ -2280,7 +2280,7 @@
                     <div class="message ${msg.role}">
                         <div>
                             <div class="message-label">${label}</div>
-                            <div class="message-bubble">${escapeHtml(msg.content)}</div>
+                            <div class="message-bubble">${simpleMarkdown(msg.content)}</div>
                             ${actions}
                         </div>
                     </div>
@@ -2603,7 +2603,7 @@
                         isTyping = true;
                         displayedText += textQueue[0];
                         textQueue = textQueue.slice(1);
-                        streamingBubble.innerHTML = escapeHtml(displayedText);
+                        streamingBubble.innerHTML = simpleMarkdown(displayedText);
                         // 最下部にいる時だけ自動スクロール
                         if (isNearBottom()) {
                             chatArea.scrollTop = chatArea.scrollHeight;
@@ -2731,8 +2731,19 @@
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
-            // 改行を<br>に変換
-            return div.innerHTML.replace(/\n/g, '<br>');
+            return div.innerHTML;
+        }
+
+        // 簡易Markdown変換（太字、斜体、改行）
+        function simpleMarkdown(text) {
+            let html = escapeHtml(text);
+            // **太字** → <strong>
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // *斜体* → <em>（太字の後に処理）
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            // 改行 → <br>
+            html = html.replace(/\n/g, '<br>');
+            return html;
         }
 
         function handleKeyDown(event) {
