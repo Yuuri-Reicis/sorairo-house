@@ -2516,7 +2516,7 @@
                 }
             }
 
-            // 履歴には表示用テキストを保存（APIには画像を送るが履歴には保存しない）
+            // 履歴には表示用テキストを保存
             session.messages.push({ role: 'user', content: displayText });
             saveSessions();
             renderChat();
@@ -2531,12 +2531,10 @@
             // ローディング表示
             isLoading = true;
             updateSendButton();
-            const loadingEl = showLoading();
 
             try {
                 // 送信用のメッセージ配列を構築
                 const historyMessages = getMessagesToSend(session);
-                // 最後のメッセージを除いた履歴 + 今回のファイル付きメッセージ
                 const messagesWithoutLast = historyMessages.slice(0, -1);
 
                 // システムメッセージに圧縮履歴を追加
@@ -2552,42 +2550,101 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey} `
+                        'Authorization': `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
                         model: getSelectedModel(),
                         messages: apiMessages,
-                        // GPT-5系は max_completion_tokens、それ以外は max_tokens
+                        stream: true,
                         ...(getSelectedModel().startsWith('gpt-5')
                             ? { max_completion_tokens: 2000 }
                             : { max_tokens: 2000 })
                     })
                 });
 
-                loadingEl.remove();
-
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error?.message || 'APIエラーが発生しました');
                 }
 
-                const data = await response.json();
-                const assistantMessage = data.choices[0].message.content;
+                // ストリーミングレスポンスを処理
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantMessage = '';
+                let promptTokens = 0;
+                let completionTokens = 0;
 
-                if (data.usage) {
-                    addTokensUsed(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
+                // アシスタントメッセージの表示用要素を作成
+                const chatArea = document.getElementById('chatArea');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message assistant';
+                messageDiv.innerHTML = `
+                    <div>
+                        <div class="message-label">レイシス</div>
+                        <div class="message-bubble" id="streamingBubble"></div>
+                    </div>
+                `;
+                chatArea.appendChild(messageDiv);
+                const streamingBubble = document.getElementById('streamingBubble');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                const delta = parsed.choices[0]?.delta?.content;
+                                if (delta) {
+                                    assistantMessage += delta;
+                                    streamingBubble.innerHTML = escapeHtml(assistantMessage);
+                                    chatArea.scrollTop = chatArea.scrollHeight;
+                                }
+                                // 使用量情報を取得（最後のチャンクに含まれることがある）
+                                if (parsed.usage) {
+                                    promptTokens = parsed.usage.prompt_tokens || 0;
+                                    completionTokens = parsed.usage.completion_tokens || 0;
+                                }
+                            } catch (e) {
+                                // JSONパースエラーは無視
+                            }
+                        }
+                    }
+                }
+
+                // streamingBubbleのIDを削除
+                streamingBubble.removeAttribute('id');
+
+                // 再生成ボタンを追加
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'message-actions';
+                actionsDiv.innerHTML = `<button class="message-action-btn" onclick="regenerateResponse()">🔄 再生成</button>`;
+                messageDiv.querySelector('div').appendChild(actionsDiv);
+
+                // トークン使用量を追加（概算）
+                if (promptTokens > 0 || completionTokens > 0) {
+                    addTokensUsed(promptTokens, completionTokens);
+                } else {
+                    // ストリーミングでは使用量が返らないことがあるので概算
+                    const estimatedTokens = estimateTokenCount(assistantMessage);
+                    addTokensUsed(0, estimatedTokens);
                 }
 
                 session.messages.push({ role: 'assistant', content: assistantMessage });
                 saveSessions();
-                renderChat();
                 renderSessionList();
 
                 // 必要に応じて履歴を圧縮（非同期で実行）
                 compressHistoryIfNeeded(session, apiKey);
 
             } catch (error) {
-                loadingEl.remove();
                 showError(error.message);
             } finally {
                 isLoading = false;
