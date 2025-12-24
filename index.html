@@ -1339,7 +1339,6 @@
 
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="resetSystemPrompt()">デフォルトに戻す</button>
                 <button class="btn btn-primary" onclick="saveSettings()">保存</button>
             </div>
         </div>
@@ -1851,12 +1850,23 @@
 
         // 1ターン分を圧縮する
         async function compressTurn(userMessage, assistantMessage, apiKey) {
-            const prompt = `以下の会話を1文で簡潔に要約してください。主語は「ゆうり」または「レイシス」で始めてください。
+            const prompt = `以下の会話を要約してください。
 
-                        ゆうり: ${userMessage}
-                        レイシス: ${assistantMessage}
+【重要】
+- レイシスの返答に感情パラメータ [H:... S:... T:... I:... P:... C:...] が含まれている場合、それをそのまま1行目に転記してください
+- パラメータがない場合は推測して作成してください
 
-                        要約: `;
+【出力形式】
+1行目: 感情パラメータ（レイシスの出力をそのまま使用）
+2行目以降: 要約（2-3文）
+  - 何が起きたかではなく、何を壊したか・何を約束したか・どんな感情があったかを重視
+  - ゆうりの感情の重さ、レイシスの選択の変化があれば必ず記録
+
+【会話】
+ゆうり: ${userMessage}
+レイシス: ${assistantMessage}
+
+【出力】`;
 
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1868,7 +1878,7 @@
                     body: JSON.stringify({
                         model: 'gpt-4o-mini',  // 圧縮には安いモデルを使う
                         messages: [{ role: 'user', content: prompt }],
-                        max_tokens: 100
+                        max_tokens: 150
                     })
                 });
 
