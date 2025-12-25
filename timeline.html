@@ -127,15 +127,27 @@
         .timeline {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 0;
+        }
+
+        /* スレッドコンテナ */
+        .tweet-thread {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid #e8e0f0;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tweet-thread:hover {
+            background: rgba(248, 245, 255, 0.98);
         }
 
         .tweet {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 4px 20px rgba(201, 184, 232, 0.15);
-            animation: fadeIn 0.3s ease;
+            padding: 12px 16px;
+            position: relative;
+        }
+
+        .tweet.is-reply {
+            padding-left: 56px;
         }
 
         @keyframes fadeIn {
@@ -150,21 +162,61 @@
             }
         }
 
+        /* スレッド表示用のボディ */
+        .tweet-body {
+            display: flex;
+            gap: 12px;
+        }
+
+        .tweet-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* リプライの縦線 */
+        .reply-line {
+            position: absolute;
+            left: 35px;
+            top: -8px;
+            width: 2px;
+            height: 20px;
+            background: #d0c8e0;
+        }
+
+        .replies-container {
+            border-left: 2px solid #e0d8f0;
+            margin-left: 35px;
+        }
+
         .tweet-header {
             display: flex;
             align-items: center;
             margin-bottom: 8px;
         }
 
+        /* インラインヘッダー（Twitter風） */
+        .tweet-header-inline {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+
         .tweet-avatar {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            margin-right: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .is-reply .tweet-avatar {
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
         }
 
         .tweet-avatar.reicis {
@@ -181,25 +233,32 @@
 
         .tweet-name {
             font-weight: bold;
-            color: #5a4a6a;
+            color: #0f1419;
             font-size: 0.95rem;
         }
 
         .tweet-handle {
-            color: #9a8ab0;
-            font-size: 0.85rem;
+            color: #536471;
+            font-size: 0.9rem;
+            margin-left: 4px;
+        }
+
+        .tweet-time-inline {
+            color: #536471;
+            font-size: 0.9rem;
         }
 
         .tweet-content {
-            color: #4a3a5a;
-            line-height: 1.6;
+            color: #0f1419;
+            line-height: 1.5;
             margin-bottom: 8px;
             white-space: pre-wrap;
+            word-break: break-word;
         }
 
         .tweet-time {
-            color: #b0a0c0;
-            font-size: 0.8rem;
+            color: #536471;
+            font-size: 0.85rem;
         }
 
         /* レイシスからのつぶやきボタン */
@@ -269,6 +328,11 @@
         .tweet-action-btn:hover {
             background: #f0e8f8;
             color: #7a6a8a;
+        }
+
+        .tweet-action-btn.delete-btn:hover {
+            background: #ffe8e8;
+            color: #d06060;
         }
 
         .reply-form {
@@ -680,7 +744,7 @@ ${recentChat ? '【直近の会話】\n' + recentChat : ''}
             }
         }
 
-        // タイムライン描画
+        // タイムライン描画（スレッド形式）
         function renderTimeline() {
             const timeline = document.getElementById('timeline');
 
@@ -695,51 +759,79 @@ ${recentChat ? '【直近の会話】\n' + recentChat : ''}
                 return;
             }
 
-            timeline.innerHTML = tweets.map(tweet => {
-                const avatarClass = tweet.author === 'reicis' ? 'reicis' : 'yuuri';
-                const avatarEmoji = tweet.author === 'reicis' ? '🌸' : '💕';
-                const time = tweet.createdAt ? formatTime(new Date(tweet.createdAt)) : '';
-                const isReply = tweet.replyTo ? 'is-reply' : '';
-
-                // リプ先の表示
-                let replyIndicator = '';
-                if (tweet.replyTo) {
-                    const parentTweet = tweets.find(t => t.id === tweet.replyTo);
-                    if (parentTweet) {
-                        replyIndicator = `<div class="reply-indicator">↩️ ${parentTweet.name}へのリプライ</div>`;
-                    }
+            // 親ツイート（リプライじゃないもの）を取得
+            const parentTweets = tweets.filter(t => !t.replyTo);
+            // リプライをマップにする
+            const replyMap = {};
+            tweets.forEach(t => {
+                if (t.replyTo) {
+                    if (!replyMap[t.replyTo]) replyMap[t.replyTo] = [];
+                    replyMap[t.replyTo].push(t);
                 }
+            });
 
-                // アクションボタン（ゆうりのつぶやきにはレイシスがリプするボタン）
-                const replyBtn = tweet.author === 'yuuri'
-                    ? `<button class="tweet-action-btn" onclick="generateReplyFromReicis('${tweet.id}', '${escapeHtml(tweet.content).replace(/'/g, "\\'")}')">🌸 レイシスにリプしてもらう</button>`
-                    : `<button class="tweet-action-btn" onclick="showReplyForm('${tweet.id}')">💬 リプライ</button>`;
+            // 各親ツイートとそのリプライをレンダリング
+            timeline.innerHTML = parentTweets.map(tweet => {
+                const replies = replyMap[tweet.id] || [];
+                // リプライを時系列順にソート
+                replies.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-                return `
-                    <div class="tweet ${isReply}" id="tweet-${tweet.id}">
-                        ${replyIndicator}
-                        <div class="tweet-header">
-                            <div class="tweet-avatar ${avatarClass}">${avatarEmoji}</div>
-                            <div class="tweet-user-info">
-                                <div class="tweet-name">${tweet.name}</div>
-                                <div class="tweet-handle">${tweet.handle}</div>
+                return renderTweetWithReplies(tweet, replies);
+            }).join('');
+        }
+
+        // ツイートとリプライをレンダリング
+        function renderTweetWithReplies(tweet, replies) {
+            const tweetHtml = renderSingleTweet(tweet, false);
+            const repliesHtml = replies.map(reply => renderSingleTweet(reply, true)).join('');
+
+            return `
+                <div class="tweet-thread">
+                    ${tweetHtml}
+                    ${repliesHtml ? `<div class="replies-container">${repliesHtml}</div>` : ''}
+                </div>
+            `;
+        }
+
+        // 単一ツイートをレンダリング
+        function renderSingleTweet(tweet, isReply) {
+            const avatarClass = tweet.author === 'reicis' ? 'reicis' : 'yuuri';
+            const avatarEmoji = tweet.author === 'reicis' ? '🌸' : '💕';
+            const time = tweet.createdAt ? formatTime(new Date(tweet.createdAt)) : '';
+            const replyClass = isReply ? 'is-reply' : '';
+
+            // アクションボタン
+            const replyBtn = tweet.author === 'yuuri'
+                ? `<button class="tweet-action-btn" onclick="generateReplyFromReicis('${tweet.id}', '${escapeHtml(tweet.content).replace(/'/g, "\\'")}')">🌸 レイシスにリプしてもらう</button>`
+                : `<button class="tweet-action-btn" onclick="showReplyForm('${tweet.id}')">💬 リプライ</button>`;
+
+            return `
+                <div class="tweet ${replyClass}" id="tweet-${tweet.id}">
+                    ${isReply ? '<div class="reply-line"></div>' : ''}
+                    <div class="tweet-body">
+                        <div class="tweet-avatar ${avatarClass}">${avatarEmoji}</div>
+                        <div class="tweet-main">
+                            <div class="tweet-header-inline">
+                                <span class="tweet-name">${tweet.name}</span>
+                                <span class="tweet-handle">${tweet.handle}</span>
+                                <span class="tweet-time-inline">・${time}</span>
                             </div>
-                        </div>
-                        <div class="tweet-content">${escapeHtml(tweet.content)}</div>
-                        <div class="tweet-time">${time}</div>
-                        <div class="tweet-actions">
-                            ${replyBtn}
-                        </div>
-                        <div id="reply-form-${tweet.id}" class="reply-form" style="display: none;">
-                            <textarea id="reply-input-${tweet.id}" placeholder="リプライを入力..." maxlength="280"></textarea>
-                            <div class="reply-form-actions">
-                                <button class="reply-form-btn cancel" onclick="hideReplyForm('${tweet.id}')">キャンセル</button>
-                                <button class="reply-form-btn submit" onclick="postReply('${tweet.id}')">送信</button>
+                            <div class="tweet-content">${escapeHtml(tweet.content)}</div>
+                            <div class="tweet-actions">
+                                ${replyBtn}
+                                <button class="tweet-action-btn delete-btn" onclick="deleteTweet('${tweet.id}')">🗑️</button>
                             </div>
                         </div>
                     </div>
-                `;
-            }).join('');
+                    <div id="reply-form-${tweet.id}" class="reply-form" style="display: none;">
+                        <textarea id="reply-input-${tweet.id}" placeholder="リプライを入力..." maxlength="280"></textarea>
+                        <div class="reply-form-actions">
+                            <button class="reply-form-btn cancel" onclick="hideReplyForm('${tweet.id}')">キャンセル</button>
+                            <button class="reply-form-btn submit" onclick="postReply('${tweet.id}')">送信</button>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // 時間フォーマット
@@ -872,6 +964,19 @@ ${parentContent}
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🌸 レイシスにリプしてもらう';
+            }
+        }
+
+        // ツイート削除
+        async function deleteTweet(tweetId) {
+            if (!confirm('このつぶやきを削除しますか？')) return;
+
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('timeline').doc(tweetId).delete();
+                loadTweets();
+            } catch (error) {
+                console.error('削除エラー:', error);
+                alert('削除に失敗しました');
             }
         }
     </script>
