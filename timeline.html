@@ -397,36 +397,54 @@
                 const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
                 const dateStr = now.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'long' });
 
-                // チャットのシステムプロンプトを読み込む
-                const systemPrompt = localStorage.getItem('system_prompt') || '';
-                const userProfile = localStorage.getItem('user_profile') || '';
-                const memoryPrompt = localStorage.getItem('memory_prompt') || '';
-
-                // セッションデータを読み込む（直近3ターン + 圧縮履歴10件）
+                // Firestoreからシステムプロンプトを読み込む
+                let systemPrompt = '';
+                let userProfile = '';
+                let memoryPrompt = '';
                 let recentChat = '';
                 let compressedHistory = '';
-                try {
-                    const sessions = JSON.parse(localStorage.getItem('chat_sessions') || '[]');
-                    const currentSessionId = localStorage.getItem('current_session_id');
-                    const session = sessions.find(s => s.id === currentSessionId);
 
-                    if (session) {
-                        // 直近3ターン（6メッセージ）を取得
-                        const recentMessages = session.messages.slice(-6);
-                        if (recentMessages.length > 0) {
-                            recentChat = recentMessages.map(m =>
-                                `${m.role === 'user' ? 'ゆうり' : 'レイシス'}: ${m.content.substring(0, 100)}`
-                            ).join('\n');
-                        }
+                if (currentUser) {
+                    try {
+                        const settingsDoc = await db.collection('users').doc(currentUser.uid).collection('settings').doc('main').get();
+                        if (settingsDoc.exists) {
+                            const data = settingsDoc.data();
+                            systemPrompt = data.systemPrompt || '';
+                            userProfile = data.userProfile || '';
+                            memoryPrompt = data.memoryPrompt || '';
 
-                        // 圧縮履歴10件を取得
-                        if (session.compressedHistory && session.compressedHistory.length > 0) {
-                            const recent10 = session.compressedHistory.slice(-10);
-                            compressedHistory = recent10.map(h => h.summary).join('\n');
+                            // セッションデータも取得
+                            if (data.sessions && data.sessions.length > 0) {
+                                const currentSessionId = data.currentSessionId;
+                                const session = data.sessions.find(s => s.id === currentSessionId);
+
+                                if (session) {
+                                    // 直近3ターン（6メッセージ）を取得
+                                    const recentMessages = (session.messages || []).slice(-6);
+                                    if (recentMessages.length > 0) {
+                                        recentChat = recentMessages.map(m =>
+                                            `${m.role === 'user' ? 'ゆうり' : 'レイシス'}: ${m.content.substring(0, 100)}`
+                                        ).join('\n');
+                                    }
+
+                                    // 圧縮履歴10件を取得
+                                    if (session.compressedHistory && session.compressedHistory.length > 0) {
+                                        const recent10 = session.compressedHistory.slice(-10);
+                                        compressedHistory = recent10.map(h => h.summary).join('\n');
+                                    }
+                                }
+                            }
                         }
+                    } catch (e) {
+                        console.error('Firestore設定読み込みエラー:', e);
                     }
-                } catch (e) {
-                    console.error('セッション読み込みエラー:', e);
+                }
+
+                // Firestoreから取得できなかった場合はlocalStorageからフォールバック
+                if (!systemPrompt) {
+                    systemPrompt = localStorage.getItem('system_prompt') || '';
+                    userProfile = localStorage.getItem('user_profile') || '';
+                    memoryPrompt = localStorage.getItem('memory_prompt') || '';
                 }
 
                 const prompt = `${systemPrompt}
