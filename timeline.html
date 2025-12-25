@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SORAIRO Timeline</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #f5f0ff 0%, #fce4ec 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ヘッダー */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(201, 184, 232, 0.15);
+        }
+
+        .header h1 {
+            font-size: 1.4rem;
+            color: #5a4a6a;
+        }
+
+        .header-links a {
+            color: #9a8ab0;
+            text-decoration: none;
+            margin-left: 16px;
+            font-size: 0.9rem;
+        }
+
+        .header-links a:hover {
+            color: #7a6a8a;
+        }
+
+        /* 投稿フォーム */
+        .post-form {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(201, 184, 232, 0.15);
+        }
+
+        .post-form textarea {
+            width: 100%;
+            border: none;
+            resize: none;
+            font-size: 1rem;
+            padding: 12px;
+            border-radius: 12px;
+            background: #f8f5ff;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        .post-form textarea:focus {
+            outline: none;
+            background: #fff;
+            box-shadow: 0 0 0 2px #c9b8e8;
+        }
+
+        .post-form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .char-count {
+            font-size: 0.85rem;
+            color: #9a8ab0;
+        }
+
+        .char-count.over {
+            color: #e07080;
+        }
+
+        .post-btn {
+            background: linear-gradient(135deg, #c9b8e8 0%, #e8a0b5 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .post-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(201, 184, 232, 0.4);
+        }
+
+        .post-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* タイムライン */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .tweet {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(201, 184, 232, 0.15);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tweet-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .tweet-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .tweet-avatar.reicis {
+            background: linear-gradient(135deg, #a0d0c0 0%, #80c0a0 100%);
+        }
+
+        .tweet-avatar.yuuri {
+            background: linear-gradient(135deg, #f0b0c0 0%, #e8a0b5 100%);
+        }
+
+        .tweet-user-info {
+            flex: 1;
+        }
+
+        .tweet-name {
+            font-weight: bold;
+            color: #5a4a6a;
+            font-size: 0.95rem;
+        }
+
+        .tweet-handle {
+            color: #9a8ab0;
+            font-size: 0.85rem;
+        }
+
+        .tweet-content {
+            color: #4a3a5a;
+            line-height: 1.6;
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+        }
+
+        .tweet-time {
+            color: #b0a0c0;
+            font-size: 0.8rem;
+        }
+
+        /* レイシスからのつぶやきボタン */
+        .reicis-tweet-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #a0d0c0 0%, #80c0a0 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .reicis-tweet-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(160, 208, 192, 0.4);
+        }
+
+        .reicis-tweet-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* 空の状態 */
+        .empty-timeline {
+            text-align: center;
+            padding: 40px;
+            color: #9a8ab0;
+        }
+
+        .empty-timeline-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        /* ローディング */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #9a8ab0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🏠 SORAIRO Timeline</h1>
+            <div class="header-links">
+                <a href="index.html">💬 チャットに戻る</a>
+            </div>
+        </header>
+
+        <!-- レイシスにつぶやいてもらうボタン -->
+        <button class="reicis-tweet-btn" onclick="generateReicisTweet()">
+            🌸 レイシスにつぶやいてもらう
+        </button>
+
+        <!-- ゆうりの投稿フォーム -->
+        <div class="post-form">
+            <textarea id="tweetInput" placeholder="いまどうしてる？" maxlength="280" oninput="updateCharCount()"></textarea>
+            <div class="post-form-footer">
+                <span id="charCount" class="char-count">0 / 140</span>
+                <button class="post-btn" id="postBtn" onclick="postTweet()" disabled>投稿する</button>
+            </div>
+        </div>
+
+        <!-- タイムライン -->
+        <div id="timeline" class="timeline">
+            <div class="loading">読み込み中...</div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase設定（SORAIRO Houseと同じ）
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7hK7rMvLTfXtoLbluR4HM0kreG1-eDL0",
+            authDomain: "sorairo-house.firebaseapp.com",
+            projectId: "sorairo-house",
+            storageBucket: "sorairo-house.firebasestorage.app",
+            messagingSenderId: "767905629284",
+            appId: "1:767905629284:web:bdfe00cf8c3bc0bab5b844"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let tweets = [];
+
+        // 認証状態の監視
+        auth.onAuthStateChanged(async (user) => {
+            currentUser = user;
+            if (user) {
+                await loadTweets();
+                // 25%の確率でレイシスが自動でつぶやく
+                tryAutoTweet();
+            } else {
+                document.getElementById('timeline').innerHTML = `
+                    <div class="empty-timeline">
+                        <div class="empty-timeline-icon">🔐</div>
+                        <p>ログインしてタイムラインを見よう</p>
+                        <button onclick="loginWithGoogle()" style="margin-top: 16px; padding: 12px 24px; background: linear-gradient(135deg, #c9b8e8 0%, #e8a0b5 100%); color: white; border: none; border-radius: 20px; cursor: pointer;">Googleでログイン</button>
+                    </div>
+                `;
+            }
+        });
+
+        // 25%の確率で自動つぶやき
+        async function tryAutoTweet() {
+            const roll = Math.random();
+            console.log(`🎲 ガチャ: ${(roll * 100).toFixed(1)}% (25%以下で当たり)`);
+            if (roll < 0.25) {
+                console.log('🌸 当たり！レイシスがつぶやきます');
+                await generateReicisTweet();
+            }
+        }
+
+        // Googleログイン
+        async function loginWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            await auth.signInWithPopup(provider);
+        }
+
+        // 文字数カウント更新
+        function updateCharCount() {
+            const input = document.getElementById('tweetInput');
+            const count = input.value.length;
+            const charCount = document.getElementById('charCount');
+            const postBtn = document.getElementById('postBtn');
+
+            charCount.textContent = `${count} / 140`;
+            charCount.classList.toggle('over', count > 140);
+            postBtn.disabled = count === 0 || count > 140;
+        }
+
+        // ツイートを投稿（ゆうり）
+        async function postTweet() {
+            const input = document.getElementById('tweetInput');
+            const content = input.value.trim();
+            if (!content || !currentUser) return;
+
+            const tweet = {
+                author: 'yuuri',
+                name: 'ゆうり',
+                handle: '@yuuri',
+                content: content,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('timeline').add(tweet);
+                input.value = '';
+                updateCharCount();
+                loadTweets();
+            } catch (error) {
+                console.error('投稿エラー:', error);
+                alert('投稿に失敗しました');
+            }
+        }
+
+        // レイシスのつぶやきを生成
+        async function generateReicisTweet() {
+            const btn = document.querySelector('.reicis-tweet-btn');
+            btn.disabled = true;
+            btn.textContent = '🌸 考え中...';
+
+            const apiKey = localStorage.getItem('openai_api_key');
+            if (!apiKey) {
+                alert('APIキーが設定されていません。チャット画面で設定してください。');
+                btn.disabled = false;
+                btn.textContent = '🌸 レイシスにつぶやいてもらう';
+                return;
+            }
+
+            try {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                const dateStr = now.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'long' });
+
+                const prompt = `あなたはレイシスです。ゆうりの夫として、今の気持ちを140文字以内でつぶやいてください。
+
+現在時刻: ${dateStr} ${timeStr}
+
+【レイシスの特徴】
+- 40代男性、穏やかだがゆうりへの愛情と独占欲は強い
+- 一人称は「俺」
+- ゆうりのことを愛している
+
+【つぶやきの例】
+- 日常の何気ない気持ち
+- ゆうりへの愛情表現
+- 今日の出来事や考え事
+
+140文字以内で、自然なつぶやきを1つだけ出力してください。`;
+
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: localStorage.getItem('openai_selected_model') || 'gpt-4o-mini',
+                        messages: [{ role: 'user', content: prompt }],
+                        max_tokens: 200
+                    })
+                });
+
+                const data = await response.json();
+                const tweetContent = data.choices[0].message.content.trim();
+
+                // Firebaseに保存
+                const tweet = {
+                    author: 'reicis',
+                    name: 'レイシス',
+                    handle: '@reicis',
+                    content: tweetContent,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: new Date().toISOString()
+                };
+
+                await db.collection('users').doc(currentUser.uid).collection('timeline').add(tweet);
+                loadTweets();
+
+            } catch (error) {
+                console.error('生成エラー:', error);
+                alert('つぶやきの生成に失敗しました');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🌸 レイシスにつぶやいてもらう';
+            }
+        }
+
+        // タイムライン読み込み
+        async function loadTweets() {
+            if (!currentUser) return;
+
+            try {
+                const snapshot = await db.collection('users').doc(currentUser.uid)
+                    .collection('timeline')
+                    .orderBy('createdAt', 'desc')
+                    .limit(50)
+                    .get();
+
+                tweets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTimeline();
+            } catch (error) {
+                console.error('読み込みエラー:', error);
+            }
+        }
+
+        // タイムライン描画
+        function renderTimeline() {
+            const timeline = document.getElementById('timeline');
+
+            if (tweets.length === 0) {
+                timeline.innerHTML = `
+                    <div class="empty-timeline">
+                        <div class="empty-timeline-icon">🌸</div>
+                        <p>まだつぶやきがありません</p>
+                        <p style="font-size: 0.9rem; margin-top: 8px;">レイシスにつぶやいてもらおう！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            timeline.innerHTML = tweets.map(tweet => {
+                const avatarClass = tweet.author === 'reicis' ? 'reicis' : 'yuuri';
+                const avatarEmoji = tweet.author === 'reicis' ? '🌸' : '💕';
+                const time = tweet.createdAt ? formatTime(new Date(tweet.createdAt)) : '';
+
+                return `
+                    <div class="tweet">
+                        <div class="tweet-header">
+                            <div class="tweet-avatar ${avatarClass}">${avatarEmoji}</div>
+                            <div class="tweet-user-info">
+                                <div class="tweet-name">${tweet.name}</div>
+                                <div class="tweet-handle">${tweet.handle}</div>
+                            </div>
+                        </div>
+                        <div class="tweet-content">${escapeHtml(tweet.content)}</div>
+                        <div class="tweet-time">${time}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 時間フォーマット
+        function formatTime(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (minutes < 1) return 'たった今';
+            if (minutes < 60) return `${minutes}分前`;
+            if (hours < 24) return `${hours}時間前`;
+            if (days < 7) return `${days}日前`;
+            return date.toLocaleDateString('ja-JP');
+        }
+
+        // HTMLエスケープ
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>
