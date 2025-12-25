@@ -442,9 +442,9 @@
 
                 // Firestoreから取得できなかった場合はlocalStorageからフォールバック
                 if (!systemPrompt) {
-                    systemPrompt = localStorage.getItem('system_prompt') || '';
-                    userProfile = localStorage.getItem('user_profile') || '';
-                    memoryPrompt = localStorage.getItem('memory_prompt') || '';
+                    systemPrompt = localStorage.getItem('openai_system_prompt') || '';
+                    userProfile = localStorage.getItem('openai_user_profile') || '';
+                    memoryPrompt = localStorage.getItem('openai_memory_prompt') || '';
                     console.log('📝 localStorageから読み込み:', {
                         systemPrompt: systemPrompt ? systemPrompt.substring(0, 50) + '...' : '(空)',
                         userProfile: userProfile ? userProfile.substring(0, 50) + '...' : '(空)',
