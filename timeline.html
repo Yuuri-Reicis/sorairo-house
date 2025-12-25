@@ -184,8 +184,7 @@
         }
 
         .replies-container {
-            border-left: 2px solid #e0d8f0;
-            margin-left: 35px;
+            padding-left: 24px;
         }
 
         .tweet-header {
@@ -401,11 +400,6 @@
                 <a href="index.html">💬 チャットに戻る</a>
             </div>
         </header>
-
-        <!-- レイシスにつぶやいてもらうボタン -->
-        <button class="reicis-tweet-btn" onclick="generateReicisTweet()">
-            🌸 レイシスにつぶやいてもらう
-        </button>
 
         <!-- ゆうりの投稿フォーム -->
         <div class="post-form">
@@ -800,10 +794,10 @@ ${recentChat ? '【直近の会話】\n' + recentChat : ''}
             const time = tweet.createdAt ? formatTime(new Date(tweet.createdAt)) : '';
             const replyClass = isReply ? 'is-reply' : '';
 
-            // アクションボタン
-            const replyBtn = tweet.author === 'yuuri'
-                ? `<button class="tweet-action-btn" onclick="generateReplyFromReicis('${tweet.id}', '${escapeHtml(tweet.content).replace(/'/g, "\\'")}')">🌸 レイシスにリプしてもらう</button>`
-                : `<button class="tweet-action-btn" onclick="showReplyForm('${tweet.id}')">💬 リプライ</button>`;
+            // アクションボタン（レイシスのつぶやきにはゆうりがリプするボタン）
+            const replyBtn = tweet.author === 'reicis'
+                ? `<button class="tweet-action-btn" onclick="showReplyForm('${tweet.id}')">💬 リプライ</button>`
+                : '';
 
             return `
                 <div class="tweet ${replyClass}" id="tweet-${tweet.id}">
@@ -885,9 +879,22 @@ ${recentChat ? '【直近の会話】\n' + recentChat : ''}
             };
 
             try {
-                await db.collection('users').doc(currentUser.uid).collection('timeline').add(tweet);
+                const docRef = await db.collection('users').doc(currentUser.uid).collection('timeline').add(tweet);
+                const replyId = docRef.id;
+                const replyContent = content;
+
                 hideReplyForm(parentTweetId);
-                loadTweets();
+                await loadTweets();
+
+                // 80%の確率でレイシスがリプ返し
+                const roll = Math.random();
+                console.log(`🎲 リプ返しガチャ: ${(roll * 100).toFixed(1)}% (80%以下で当たり)`);
+                if (roll < 0.80) {
+                    console.log('🌸 当たり！レイシスがリプ返しします');
+                    setTimeout(() => {
+                        autoReplyFromReicis(replyId, replyContent);
+                    }, 1500);
+                }
             } catch (error) {
                 console.error('リプ投稿エラー:', error);
                 alert('リプライの投稿に失敗しました');
