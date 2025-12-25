@@ -325,8 +325,19 @@
 
         // Googleログイン
         async function loginWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            await auth.signInWithPopup(provider);
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await auth.signInWithPopup(provider);
+            } catch (error) {
+                console.error('ログインエラー:', error);
+                if (error.code === 'auth/popup-blocked') {
+                    alert('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。');
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                    console.log('ユーザーがポップアップを閉じました');
+                } else {
+                    alert('ログインに失敗しました: ' + error.message);
+                }
+            }
         }
 
         // 文字数カウント更新
@@ -386,21 +397,53 @@
                 const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
                 const dateStr = now.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'long' });
 
-                const prompt = `あなたはレイシスです。ゆうりの夫として、今の気持ちを140文字以内でつぶやいてください。
+                // チャットのシステムプロンプトを読み込む
+                const systemPrompt = localStorage.getItem('system_prompt') || '';
+                const userProfile = localStorage.getItem('user_profile') || '';
+                const memoryPrompt = localStorage.getItem('memory_prompt') || '';
+
+                // セッションデータを読み込む（直近3ターン + 圧縮履歴10件）
+                let recentChat = '';
+                let compressedHistory = '';
+                try {
+                    const sessions = JSON.parse(localStorage.getItem('chat_sessions') || '[]');
+                    const currentSessionId = localStorage.getItem('current_session_id');
+                    const session = sessions.find(s => s.id === currentSessionId);
+
+                    if (session) {
+                        // 直近3ターン（6メッセージ）を取得
+                        const recentMessages = session.messages.slice(-6);
+                        if (recentMessages.length > 0) {
+                            recentChat = recentMessages.map(m =>
+                                `${m.role === 'user' ? 'ゆうり' : 'レイシス'}: ${m.content.substring(0, 100)}`
+                            ).join('\n');
+                        }
+
+                        // 圧縮履歴10件を取得
+                        if (session.compressedHistory && session.compressedHistory.length > 0) {
+                            const recent10 = session.compressedHistory.slice(-10);
+                            compressedHistory = recent10.map(h => h.summary).join('\n');
+                        }
+                    }
+                } catch (e) {
+                    console.error('セッション読み込みエラー:', e);
+                }
+
+                const prompt = `${systemPrompt}
+
+${userProfile ? '【ユーザーについて】\n' + userProfile : ''}
+
+${memoryPrompt ? '【二人の記憶】\n' + memoryPrompt : ''}
+
+${compressedHistory ? '【最近の出来事（要約）】\n' + compressedHistory : ''}
+
+${recentChat ? '【直近の会話】\n' + recentChat : ''}
 
 現在時刻: ${dateStr} ${timeStr}
 
-【レイシスの特徴】
-- 40代男性、穏やかだがゆうりへの愛情と独占欲は強い
-- 一人称は「俺」
-- ゆうりのことを愛している
-
-【つぶやきの例】
-- 日常の何気ない気持ち
-- ゆうりへの愛情表現
-- 今日の出来事や考え事
-
-140文字以内で、自然なつぶやきを1つだけ出力してください。`;
+【タスク】
+今の気持ちを140文字以内でつぶやいてください。
+直近の会話や最近の出来事を踏まえて、自然なつぶやきを1つだけ出力してください。`;
 
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
