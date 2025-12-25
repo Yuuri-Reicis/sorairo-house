@@ -445,6 +445,13 @@
                     systemPrompt = localStorage.getItem('system_prompt') || '';
                     userProfile = localStorage.getItem('user_profile') || '';
                     memoryPrompt = localStorage.getItem('memory_prompt') || '';
+                    console.log('📝 localStorageから読み込み:', {
+                        systemPrompt: systemPrompt ? systemPrompt.substring(0, 50) + '...' : '(空)',
+                        userProfile: userProfile ? userProfile.substring(0, 50) + '...' : '(空)',
+                        memoryPrompt: memoryPrompt ? memoryPrompt.substring(0, 50) + '...' : '(空)'
+                    });
+                } else {
+                    console.log('📝 Firestoreから読み込み成功');
                 }
 
                 const prompt = `${systemPrompt}
