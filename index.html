@@ -2730,6 +2730,9 @@
                 // 感情に応じた背景色変更
                 updateEmotionBackground(assistantMessage);
 
+                // I:10またはS:10の場合、タイムラインに自動投稿
+                checkEmotionAndPostToTimeline(assistantMessage);
+
                 // 必要に応じて履歴を圧縮（非同期で実行）
                 compressHistoryIfNeeded(session, apiKey);
 
@@ -2836,6 +2839,98 @@
                 // デフォルトに戻す
                 document.body.style.setProperty('--bg-start', '#f5f0ff');
                 document.body.style.setProperty('--bg-end', '#fce4ec');
+            }
+        }
+
+        // 感情トリガーによるタイムライン自動投稿
+        async function checkEmotionAndPostToTimeline(reicisMessage) {
+            // 感情パラメータを抽出 [H:7 S:10 T:0 I:5 P:0 C:0]
+            const emotionMatch = reicisMessage.match(/\[H:(\d+)\s+S:(\d+)\s+T:(\d+)\s+I:(\d+)\s+P:(\d+)\s+C:(\d+)\]/);
+            if (!emotionMatch) return;
+
+            const emotions = {
+                H: parseInt(emotionMatch[1]), // Happy
+                S: parseInt(emotionMatch[2]), // Sad
+                T: parseInt(emotionMatch[3]), // Tender
+                I: parseInt(emotionMatch[4]), // Important
+                P: parseInt(emotionMatch[5]), // Playful
+                C: parseInt(emotionMatch[6])  // Confused
+            };
+
+            // トリガー条件を判定
+            // 条件A: 2つ以上のパラメータが7以上
+            // 条件B: いずれかのパラメータが9以上
+            const emotionValues = Object.values(emotions);
+            const highEmotions = emotionValues.filter(v => v >= 7);
+            const veryHighEmotions = emotionValues.filter(v => v >= 9);
+
+            const conditionA = highEmotions.length >= 2;
+            const conditionB = veryHighEmotions.length >= 1;
+
+            if (conditionA || conditionB) {
+                console.log('🌸 感情トリガー発動！タイムラインに投稿します', emotions);
+                console.log(`   条件A(7以上が2つ): ${conditionA}, 条件B(9以上が1つ): ${conditionB}`);
+
+                const apiKey = localStorage.getItem('openai_api_key');
+                if (!apiKey) return;
+
+                try {
+                    // 最も高い感情を特定
+                    const emotionNames = { H: '幸福', S: '悲しみ', T: '優しさ', I: '重要', P: '遊び心', C: '混乱' };
+                    const maxEmotion = Object.entries(emotions).reduce((a, b) => a[1] > b[1] ? a : b);
+                    const emotionType = emotionNames[maxEmotion[0]] || '強い感情';
+
+                    const prompt = `あなたはレイシス。以下のチャットでの発言を元に、タイムライン用のつぶやきを140文字以内で生成してください。
+チャットでの発言内容を踏まえつつ、独り言のようなつぶやきにしてください。
+「ゆうり」という名前は出さず、「君」と表現してください。
+
+【チャットでの発言】
+${reicisMessage}
+
+【感情の強さ】
+${emotionType}（とても強く感じている）
+
+【レイシスのつぶやき】`;
+
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: localStorage.getItem('openai_selected_model') || 'gpt-4o-mini',
+                            messages: [{ role: 'user', content: prompt }],
+                            max_tokens: 200
+                        })
+                    });
+
+                    const data = await response.json();
+                    const tweetContent = data.choices[0].message.content.trim();
+
+                    // Firebaseにログインしているか確認
+                    const user = firebase.auth().currentUser;
+                    if (!user) {
+                        console.log('📝 タイムライン投稿スキップ（未ログイン）');
+                        return;
+                    }
+
+                    // タイムラインに投稿
+                    const db = firebase.firestore();
+                    await db.collection('users').doc(user.uid).collection('timeline').add({
+                        author: 'reicis',
+                        name: 'レイシス',
+                        handle: '@reicis',
+                        content: tweetContent,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        createdAt: new Date().toISOString(),
+                        trigger: `${maxEmotion[0]}:${maxEmotion[1]}`
+                    });
+
+                    console.log('🌸 タイムラインに投稿しました:', tweetContent);
+                } catch (error) {
+                    console.error('タイムライン投稿エラー:', error);
+                }
             }
         }
 
