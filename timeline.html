@@ -761,18 +761,24 @@ ${recentChat ? '【直近の会話】\n' + recentChat : ''}
 
             // 各親ツイートとそのリプライをレンダリング
             timeline.innerHTML = parentTweets.map(tweet => {
-                const replies = replyMap[tweet.id] || [];
-                // リプライを時系列順にソート
-                replies.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-                return renderTweetWithReplies(tweet, replies);
+                return renderTweetWithReplies(tweet, replyMap, false);
             }).join('');
         }
 
-        // ツイートとリプライをレンダリング
-        function renderTweetWithReplies(tweet, replies) {
-            const tweetHtml = renderSingleTweet(tweet, false);
-            const repliesHtml = replies.map(reply => renderSingleTweet(reply, true)).join('');
+        // ツイートとリプライを再帰的にレンダリング
+        function renderTweetWithReplies(tweet, replyMap, isReply = false) {
+            const tweetHtml = renderSingleTweet(tweet, isReply);
+
+            // このツイートへのリプライを取得
+            const replies = replyMap[tweet.id] || [];
+            replies.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+            // 再帰的にリプライをレンダリング
+            const repliesHtml = replies.map(reply => renderTweetWithReplies(reply, replyMap, true)).join('');
+
+            if (isReply) {
+                return tweetHtml + repliesHtml;
+            }
 
             return `
                 <div class="tweet-thread">
